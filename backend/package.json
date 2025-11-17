@@ -56,7 +56,7 @@
     "@types/passport-jwt": "^3.0.13",
     "@types/passport-google-oauth20": "^2.0.14",
     "@types/bcrypt": "^5.0.2",
-    "@typescript-eslint/eslint-plugin": "^6.13.2",
+    "@typescript-eslint/eslint-plugin": "^8.47.0",
     "@typescript-eslint/parser": "^6.13.2",
     "eslint": "^8.55.0",
     "eslint-config-prettier": "^9.1.0",
