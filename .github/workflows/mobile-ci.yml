@@ -1,0 +1,303 @@
+name: Mobile App CI/CD
+
+on:
+  push:
+    branches: [main, develop, claude/**]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-ci.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'mobile/**'
+
+jobs:
+  analyze:
+    name: Analyze & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Verify dependencies
+        working-directory: mobile
+        run: flutter pub deps
+
+      - name: Analyze code
+        working-directory: mobile
+        run: flutter analyze
+
+      - name: Check formatting
+        working-directory: mobile
+        run: dart format --set-exit-if-changed .
+
+      - name: Run custom lint rules
+        working-directory: mobile
+        run: flutter pub run custom_lint
+        continue-on-error: true
+
+  test:
+    name: Unit & Widget Tests
+    runs-on: ubuntu-latest
+    needs: analyze
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Generate mocks
+        working-directory: mobile
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Run tests with coverage
+        working-directory: mobile
+        run: flutter test --coverage --reporter=expanded
+
+      - name: Check coverage threshold
+        working-directory: mobile
+        run: |
+          total_coverage=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | awk '{print $2}' | sed 's/%//')
+          echo "Total coverage: $total_coverage%"
+          if (( $(echo "$total_coverage < 60" | bc -l) )); then
+            echo "Coverage is below 60%"
+            exit 1
+          fi
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./mobile/coverage/lcov.info
+          flags: mobile
+          name: mobile-coverage
+
+      - name: Generate coverage HTML report
+        working-directory: mobile
+        run: genhtml coverage/lcov.info -o coverage/html
+
+      - name: Upload coverage HTML
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: mobile/coverage/html
+
+  integration-test:
+    name: Integration Tests (Patrol)
+    runs-on: macos-latest
+    needs: test
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Run Patrol integration tests
+        working-directory: mobile
+        run: patrol test --target integration_test/app_test.dart
+        continue-on-error: true
+
+  build-android:
+    name: Build Android APK/AAB
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Build APK
+        working-directory: mobile
+        run: flutter build apk --release
+
+      - name: Build App Bundle
+        working-directory: mobile
+        run: flutter build appbundle --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload App Bundle
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-aab
+          path: mobile/build/app/outputs/bundle/release/app-release.aab
+
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-latest
+    needs: test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Setup CocoaPods
+        working-directory: mobile/ios
+        run: pod install
+
+      - name: Build iOS (no codesign)
+        working-directory: mobile
+        run: flutter build ios --release --no-codesign
+
+      - name: Create IPA (Archive)
+        working-directory: mobile/ios
+        run: |
+          xcodebuild -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -archivePath $PWD/build/Runner.xcarchive \
+            archive
+
+      - name: Upload iOS Archive
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios-archive
+          path: mobile/ios/build/Runner.xcarchive
+
+  deploy-android:
+    name: Deploy Android to Play Store
+    runs-on: ubuntu-latest
+    needs: build-android
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download App Bundle
+        uses: actions/download-artifact@v3
+        with:
+          name: android-aab
+          path: mobile/build/app/outputs/bundle/release
+
+      - name: Deploy to Play Store (Internal Testing)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          packageName: com.healthfitness.app
+          releaseFiles: mobile/build/app/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
+
+  deploy-ios:
+    name: Deploy iOS to TestFlight
+    runs-on: macos-latest
+    needs: build-ios
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download iOS Archive
+        uses: actions/download-artifact@v3
+        with:
+          name: ios-archive
+          path: mobile/ios/build
+
+      - name: Export IPA
+        working-directory: mobile/ios
+        env:
+          EXPORT_OPTIONS_PLIST: ${{ secrets.IOS_EXPORT_OPTIONS }}
+        run: |
+          echo "$EXPORT_OPTIONS_PLIST" > ExportOptions.plist
+          xcodebuild -exportArchive \
+            -archivePath build/Runner.xcarchive \
+            -exportPath build/ipa \
+            -exportOptionsPlist ExportOptions.plist
+
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: mobile/ios/build/ipa/Runner.ipa
+          issuer-id: ${{ secrets.APPLE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPLE_API_KEY_ID }}
+          api-private-key: ${{ secrets.APPLE_API_PRIVATE_KEY }}
+
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [deploy-android, deploy-ios]
+    if: always()
+
+    steps:
+      - name: Notify Success
+        if: needs.deploy-android.result == 'success' || needs.deploy-ios.result == 'success'
+        run: |
+          echo "Mobile app deployed successfully!"
+          # Add Slack/Discord/Email notification here
+
+      - name: Notify Failure
+        if: needs.deploy-android.result == 'failure' || needs.deploy-ios.result == 'failure'
+        run: |
+          echo "Mobile app deployment failed!"
+          # Add Slack/Discord/Email notification here

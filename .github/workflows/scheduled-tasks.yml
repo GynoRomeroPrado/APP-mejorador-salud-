@@ -1,0 +1,169 @@
+name: Scheduled Tasks
+
+on:
+  schedule:
+    # Run every day at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  cleanup-old-branches:
+    name: Cleanup Old Branches
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Delete old claude/* branches
+        run: |
+          # Delete claude/* branches older than 7 days
+          git branch -r | grep 'origin/claude/' | while read branch; do
+            branch_name=${branch#origin/}
+            last_commit_date=$(git log -1 --format=%ci $branch)
+            days_old=$(( ( $(date +%s) - $(date -d "$last_commit_date" +%s) ) / 86400 ))
+
+            if [ $days_old -gt 7 ]; then
+              echo "Deleting branch $branch_name (${days_old} days old)"
+              git push origin --delete $branch_name || echo "Failed to delete $branch_name"
+            fi
+          done
+
+  cleanup-old-workflows:
+    name: Cleanup Old Workflow Runs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          retain_days: 30
+          keep_minimum_runs: 10
+
+  update-dependencies-report:
+    name: Generate Dependencies Report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Install license-checker
+        run: npm install -g license-checker
+
+      - name: Generate Backend Dependencies Report
+        working-directory: backend
+        run: |
+          npm ci
+          license-checker --json --out ../dependencies-backend.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate ML Service Dependencies Report
+        working-directory: ml-service
+        run: |
+          pip install pip-licenses
+          pip-licenses --format=json --output-file=../dependencies-ml.json
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: dependencies-reports
+          path: |
+            dependencies-backend.json
+            dependencies-ml.json
+          retention-days: 90
+
+  security-scan:
+    name: Weekly Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  performance-audit:
+    name: Performance Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+
+      - name: Build and analyze mobile app
+        working-directory: mobile
+        run: |
+          flutter pub get
+          flutter build apk --release --analyze-size
+
+      - name: Upload size analysis
+        uses: actions/upload-artifact@v3
+        with:
+          name: size-analysis
+          path: mobile/build/apk-analysis.json
+          retention-days: 90
+
+  stale-issues:
+    name: Mark Stale Issues
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark stale issues and PRs
+        uses: actions/stale@v8
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          stale-issue-message: 'This issue has been automatically marked as stale because it has not had recent activity. It will be closed if no further activity occurs within 7 days.'
+          stale-pr-message: 'This PR has been automatically marked as stale because it has not had recent activity. It will be closed if no further activity occurs within 7 days.'
+          stale-issue-label: 'stale'
+          stale-pr-label: 'stale'
+          days-before-stale: 60
+          days-before-close: 7
+          exempt-issue-labels: 'pinned,security,bug'
+          exempt-pr-labels: 'pinned,security'
+
+  backup-config:
+    name: Backup Configuration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create backup archive
+        run: |
+          tar -czf config-backup-$(date +%Y%m%d).tar.gz \
+            .github/ \
+            backend/package.json \
+            ml-service/requirements.txt \
+            mobile/pubspec.yaml
+
+      - name: Upload backup
+        uses: actions/upload-artifact@v3
+        with:
+          name: config-backup
+          path: config-backup-*.tar.gz
+          retention-days: 365

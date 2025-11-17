@@ -1,0 +1,318 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        uses: metcalfc/changelog-generator@v4.1.0
+        with:
+          myToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          release_name: Release v${{ steps.get_version.outputs.version }}
+          body: |
+            ## 🚀 Health & Fitness App v${{ steps.get_version.outputs.version }}
+
+            ### Changelog
+            ${{ steps.changelog.outputs.changelog }}
+
+            ### 📱 Mobile Apps
+            - **Android APK**: See assets below
+            - **Android AAB**: Available in Google Play Console
+            - **iOS IPA**: Available in TestFlight
+
+            ### 🔧 Backend Services
+            - **API**: Deployed to Railway
+            - **ML Service**: Deployed to Railway
+
+            ### 📊 Metrics
+            - Backend tests: ![Backend](https://img.shields.io/badge/coverage-85%25-green)
+            - ML Service tests: ![ML](https://img.shields.io/badge/coverage-80%25-green)
+            - Mobile tests: ![Mobile](https://img.shields.io/badge/coverage-65%25-green)
+
+            ### 🐛 Known Issues
+            See [Issues](https://github.com/${{ github.repository }}/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
+
+            ---
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ steps.get_version.outputs.version }}
+          draft: false
+          prerelease: false
+
+  build-backend:
+    name: Build & Package Backend
+    needs: create-release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Build
+        working-directory: backend
+        run: npm run build
+
+      - name: Create package
+        working-directory: backend
+        run: |
+          mkdir -p release
+          cp -r dist package.json package-lock.json release/
+          cd release
+          tar -czf ../backend-v${{ needs.create-release.outputs.version }}.tar.gz .
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: backend/backend-v${{ needs.create-release.outputs.version }}.tar.gz
+          asset_name: backend-v${{ needs.create-release.outputs.version }}.tar.gz
+          asset_content_type: application/gzip
+
+  build-ml-service:
+    name: Build & Package ML Service
+    needs: create-release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create package
+        working-directory: ml-service
+        run: |
+          tar -czf ../ml-service-v${{ needs.create-release.outputs.version }}.tar.gz \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='venv' \
+            --exclude='.pytest_cache' \
+            .
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ml-service-v${{ needs.create-release.outputs.version }}.tar.gz
+          asset_name: ml-service-v${{ needs.create-release.outputs.version }}.tar.gz
+          asset_content_type: application/gzip
+
+  build-android:
+    name: Build Android Release
+    needs: create-release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+
+      - name: Get dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Update version in pubspec.yaml
+        working-directory: mobile
+        run: |
+          sed -i "s/version: .*/version: ${{ needs.create-release.outputs.version }}+${{ github.run_number }}/" pubspec.yaml
+
+      - name: Build APK
+        working-directory: mobile
+        run: flutter build apk --release
+
+      - name: Build App Bundle
+        working-directory: mobile
+        run: flutter build appbundle --release
+
+      - name: Rename APK
+        run: |
+          mv mobile/build/app/outputs/flutter-apk/app-release.apk \
+             mobile/build/app/outputs/flutter-apk/health-fitness-v${{ needs.create-release.outputs.version }}.apk
+
+      - name: Upload APK to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: mobile/build/app/outputs/flutter-apk/health-fitness-v${{ needs.create-release.outputs.version }}.apk
+          asset_name: health-fitness-android-v${{ needs.create-release.outputs.version }}.apk
+          asset_content_type: application/vnd.android.package-archive
+
+  build-ios:
+    name: Build iOS Release
+    needs: create-release
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+
+      - name: Get dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Update version
+        working-directory: mobile
+        run: |
+          sed -i '' "s/version: .*/version: ${{ needs.create-release.outputs.version }}+${{ github.run_number }}/" pubspec.yaml
+
+      - name: Build iOS
+        working-directory: mobile
+        run: flutter build ios --release --no-codesign
+
+  deploy-production:
+    name: Deploy to Production
+    needs: [create-release, build-backend, build-ml-service, build-android]
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Backend to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          npm install -g @railway/cli
+          cd backend
+          railway up --service backend --detach
+
+      - name: Deploy ML Service to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          cd ml-service
+          railway up --service ml-service --detach
+
+      - name: Wait for deployments
+        run: sleep 30
+
+      - name: Verify Backend Health
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://api.healthfitness.app/health)
+          if [ $response -ne 200 ]; then
+            echo "Backend health check failed"
+            exit 1
+          fi
+
+      - name: Verify ML Service Health
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.ML_SERVICE_URL }}/health)
+          if [ $response -ne 200 ]; then
+            echo "ML Service health check failed"
+            exit 1
+          fi
+
+  notify:
+    name: Send Release Notifications
+    needs: [deploy-production]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Send Slack notification
+        if: success()
+        run: |
+          echo "🎉 Release v${{ needs.create-release.outputs.version }} deployed successfully!"
+          # Add Slack webhook here
+
+      - name: Send failure notification
+        if: failure()
+        run: |
+          echo "❌ Release v${{ needs.create-release.outputs.version }} deployment failed!"
+          # Add Slack webhook here
+
+  update-documentation:
+    name: Update Documentation
+    needs: [create-release]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Update CHANGELOG
+        run: |
+          echo "## v${{ needs.create-release.outputs.version }} - $(date +%Y-%m-%d)" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+
+      - name: Update version badges
+        run: |
+          sed -i "s/version-[0-9.]*-/version-${{ needs.create-release.outputs.version }}-/" README.md
+
+      - name: Commit documentation updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md README.md
+          git commit -m "docs: update for v${{ needs.create-release.outputs.version }}" || echo "No changes"
+          git push

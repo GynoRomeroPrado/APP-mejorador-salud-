@@ -1,0 +1,95 @@
+version: 2
+updates:
+  # Backend (NestJS)
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "GynoRomeroPrado"
+    labels:
+      - "dependencies"
+      - "backend"
+      - "automated"
+    commit-message:
+      prefix: "chore(backend)"
+      include: "scope"
+    ignore:
+      # Ignore major version updates for stable dependencies
+      - dependency-name: "@nestjs/*"
+        update-types: ["version-update:semver-major"]
+
+  # ML Service (Python)
+  - package-ecosystem: "pip"
+    directory: "/ml-service"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "GynoRomeroPrado"
+    labels:
+      - "dependencies"
+      - "ml-service"
+      - "automated"
+    commit-message:
+      prefix: "chore(ml)"
+      include: "scope"
+
+  # Mobile (Flutter/Dart)
+  - package-ecosystem: "pub"
+    directory: "/mobile"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "GynoRomeroPrado"
+    labels:
+      - "dependencies"
+      - "mobile"
+      - "automated"
+    commit-message:
+      prefix: "chore(mobile)"
+      include: "scope"
+    ignore:
+      # Ignore Flutter SDK updates (manual)
+      - dependency-name: "flutter"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "GynoRomeroPrado"
+    labels:
+      - "dependencies"
+      - "ci/cd"
+      - "automated"
+    commit-message:
+      prefix: "chore(ci)"
+      include: "scope"
+
+  # Docker
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "GynoRomeroPrado"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "automated"
+    commit-message:
+      prefix: "chore(docker)"

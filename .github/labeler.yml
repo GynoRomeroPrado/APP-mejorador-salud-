@@ -1,0 +1,55 @@
+# Auto-labeling configuration for PRs
+
+backend:
+  - backend/**/*
+
+ml-service:
+  - ml-service/**/*
+
+mobile:
+  - mobile/**/*
+
+frontend:
+  - frontend/**/*
+
+documentation:
+  - '**/*.md'
+  - docs/**/*
+
+ci/cd:
+  - .github/**/*
+
+tests:
+  - '**/*test.dart'
+  - '**/*_test.dart'
+  - '**/test/**/*'
+  - '**/*.spec.ts'
+  - '**/*.test.ts'
+  - '**/tests/**/*'
+
+dependencies:
+  - '**/package.json'
+  - '**/package-lock.json'
+  - '**/pubspec.yaml'
+  - '**/requirements.txt'
+  - '**/Gemfile'
+
+docker:
+  - '**/Dockerfile'
+  - '**/docker-compose.yml'
+  - '**/.dockerignore'
+
+security:
+  - '**/*security*'
+  - '**/*auth*'
+  - '**/*jwt*'
+
+performance:
+  - '**/*performance*'
+  - '**/*optimization*'
+  - '**/*cache*'
+
+breaking-change:
+  - any:
+    - '**/*BREAKING*'
+    - '**/*breaking*'
