@@ -1,268 +1,485 @@
-# Health & Fitness App with Medication Reminders
+# 💪 Health & Fitness App
 
-A comprehensive mobile health application combining workout tracking, medication reminders, health news, and AI-powered recommendations.
+> Aplicación móvil completa de salud y fitness con IA, gamificación y seguimiento personalizado
 
-## Project Overview
+[![Backend CI](https://github.com/GynoRomeroPrado/APP-mejorador-salud-/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/GynoRomeroPrado/APP-mejorador-salud-/actions/workflows/backend-ci.yml)
+[![ML Service CI](https://github.com/GynoRomeroPrado/APP-mejorador-salud-/actions/workflows/ml-service-ci.yml/badge.svg)](https://github.com/GynoRomeroPrado/APP-mejorador-salud-/actions/workflows/ml-service-ci.yml)
+[![Mobile CI](https://github.com/GynoRomeroPrado/APP-mejorador-salud-/actions/workflows/mobile-ci.yml/badge.svg)](https://github.com/GynoRomeroPrado/APP-mejorador-salud-/actions/workflows/mobile-ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/GynoRomeroPrado/APP-mejorador-salud-)
 
-**Market Size**: $16.6B (2024) → $88B (2032), CAGR 15.4%
-**Target Users**: Fitness enthusiasts, chronic patients, adults 25-55 years
-**Platform**: Cross-platform (iOS, Android, Web via Flutter)
+---
 
-## Features
+## 📋 Tabla de Contenidos
 
-### Phase 1: MVP (Months 1-3)
-- ✅ User authentication (Email/Password + OAuth Google/Apple)
-- ✅ Exercise library (1,000+ exercises with GIFs from ExerciseDB)
-- ✅ Workout tracking (sets, reps, weight, timer)
-- ✅ Medication reminders (smart alarms, calendar, adherence tracking)
-- ✅ Gamification (streaks, badges, achievements)
-- ✅ Daily motivational quotes
-- ✅ GDPR compliance (Privacy Policy, ToS)
+- [Descripción](#-descripción)
+- [Características](#-características)
+- [Arquitectura](#-arquitectura)
+- [Stack Tecnológico](#-stack-tecnológico)
+- [Inicio Rápido](#-inicio-rápido)
+- [Estructura del Proyecto](#-estructura-del-proyecto)
+- [Testing](#-testing)
+- [CI/CD](#-cicd)
+- [Deployment](#-deployment)
+- [Contribuir](#-contribuir)
+- [Licencia](#-licencia)
 
-### Phase 2: Growth (Months 4-6)
-- MediaPipe pose detection (auto rep counting)
-- ML workout recommendations (XGBoost)
-- Health news feed (NewsAPI + PubMed)
-- Drug interaction checker
-- Social features (friends, challenges, leaderboards)
-- Freemium model ($9.99/month)
+---
 
-### Phase 3: Scale (Months 7-12)
-- AR workout guidance
-- Wearable integrations (Apple Watch, Fitbit)
-- Advanced ML (injury prediction, auto-periodization)
-- Nutrition tracking + meal planning
-- Live video classes
-- Marketplace (coaches, premium plans)
+## 🎯 Descripción
 
-## Tech Stack
+Health & Fitness App es una aplicación móvil completa que combina seguimiento de entrenamientos, recomendaciones personalizadas con Machine Learning, y un sistema de gamificación para mantener a los usuarios motivados en su viaje fitness.
 
-### Frontend
-- **Framework**: Flutter 3.19+
-- **State Management**: Riverpod 2.4+
-- **Local Database**: Hive/Isar (offline-first)
-- **Notifications**: flutter_local_notifications
-- **ML**: TensorFlow Lite, MediaPipe
+### 🌟 MVP Completado (v1.0.0)
+
+- ✅ **Autenticación**: Email/Password + OAuth (Google, Apple)
+- ✅ **1,000+ Ejercicios**: Integración con ExerciseDB API
+- ✅ **Entrenamientos**: Creación, seguimiento y análisis de rutinas
+- ✅ **Gamificación**: Sistema de XP, niveles, logros y rachas
+- ✅ **IA/ML**: Recomendaciones personalizadas con Machine Learning
+- ✅ **Testing**: >65% cobertura en mobile, >80% en backend
+- ✅ **CI/CD**: Deployment automático con GitHub Actions
+
+---
+
+## ✨ Características
+
+### 🔐 Autenticación y Perfiles
+
+- Registro e inicio de sesión con email/password
+- OAuth 2.0 con Google y Apple
+- Onboarding personalizado de 3 pasos
+- Perfiles de usuario con métricas de salud (altura, peso, BMI)
+- Gestión de sesiones con JWT y refresh tokens
+
+### 💪 Biblioteca de Ejercicios
+
+- **1,000+ ejercicios** con animaciones GIF
+- Búsqueda y filtrado avanzado
+- 14 grupos musculares
+- 20+ tipos de equipamiento
+- Favoritos offline con sincronización inteligente
+- Traducciones al español
+
+### 🏋️ Seguimiento de Entrenamientos
+
+- Creación de rutinas personalizadas
+- Plantillas predefinidas
+- Tracking en tiempo real con timer
+- Registro de sets (peso, repeticiones, notas)
+- Historial completo con estadísticas
+- Seguimiento de Personal Records (PRs)
+- Estimación de calorías quemadas
+
+### 🎮 Gamificación
+
+- **Sistema de XP**: Gana experiencia por cada actividad
+- **Niveles**: Progresión con fórmula exponencial
+- **6 Títulos**: Desde Principiante hasta Campeón
+- **Logros**: 15+ achievements con 4 niveles de dificultad
+- **Rachas**: Seguimiento de días consecutivos
+- **Quotes Diarios**: Frases motivacionales
+
+### 🤖 Inteligencia Artificial
+
+- Recomendaciones de workouts con Random Forest
+- Predicción de ejercicios con K-NN
+- Análisis de progreso
+- Insights personalizados
+- Estimación inteligente de calorías
+
+---
+
+## 🏗️ Arquitectura
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Mobile App (Flutter)                  │
+│  ┌────────┐  ┌──────────┐  ┌────────────┐  ┌──────────┐ │
+│  │   UI   │→ │ Providers│→ │Repositories│→ │DataSources│ │
+│  └────────┘  └──────────┘  └────────────┘  └──────────┘ │
+└───────────────────────────────┬─────────────────────────┘
+                                │
+                    ┌───────────┴───────────┐
+                    ▼                       ▼
+          ┌─────────────────┐    ┌──────────────────┐
+          │  NestJS Backend │    │  FastAPI ML      │
+          │      API        │◄───│    Service       │
+          └────────┬────────┘    └──────────────────┘
+                   │
+          ┌────────┴────────┐
+          │   PostgreSQL    │
+          │   (Supabase)    │
+          └─────────────────┘
+```
+
+**Patrón:** Clean Architecture + Microservices
+
+---
+
+## 🛠️ Stack Tecnológico
+
+### Mobile App
+
+| Tecnología | Versión | Propósito |
+|------------|---------|-----------|
+| Flutter | 3.19+ | Framework UI |
+| Dart | 3.2+ | Lenguaje |
+| Riverpod | 2.4+ | State Management |
+| Freezed | 2.4+ | Immutable Models |
+| Hive | 2.2+ | Local Storage |
 
 ### Backend
-- **API**: Node.js 20+ with NestJS 10+
-- **Real-time**: Socket.IO
-- **ML Service**: Python 3.11+ with FastAPI 0.109+
-- **ML Libraries**: scikit-learn, XGBoost, MediaPipe 0.10+
 
-### Database & Cloud
-- **Primary DB**: PostgreSQL 16+ via Supabase
-- **Cache**: Upstash Redis (serverless)
-- **Storage**: CloudFlare R2 / Supabase Storage
-- **Hosting MVP**: Railway ($5/mo) + Supabase ($25/mo)
-- **CDN**: CloudFlare (free tier)
+| Tecnología | Versión | Propósito |
+|------------|---------|-----------|
+| NestJS | 10.x | Framework Backend |
+| TypeScript | 5.x | Lenguaje |
+| PostgreSQL | 16+ | Base de Datos |
+| TypeORM | 0.3+ | ORM |
+| Passport | 0.7+ | Autenticación |
+
+### ML Service
+
+| Tecnología | Versión | Propósito |
+|------------|---------|-----------|
+| FastAPI | 0.104+ | Framework ML API |
+| Python | 3.11+ | Lenguaje |
+| scikit-learn | 1.3+ | ML Algorithms |
+| XGBoost | 2.0+ | Gradient Boosting |
 
 ### DevOps
-- **CI/CD**: GitHub Actions
-- **Monitoring**: Sentry (errors), Mixpanel (analytics)
-- **Version Control**: Git + GitHub
 
-## Project Structure
+| Tecnología | Propósito |
+|------------|-----------|
+| GitHub Actions | CI/CD |
+| Railway | Hosting Backend + ML |
+| Supabase | Database + Auth |
+| Codecov | Code Coverage |
 
-```
-health-app/
-├── mobile/                    # Flutter mobile app
-│   ├── lib/
-│   │   ├── core/             # Core utilities, constants
-│   │   ├── features/         # Feature modules
-│   │   │   ├── auth/
-│   │   │   ├── workouts/
-│   │   │   ├── medications/
-│   │   │   ├── gamification/
-│   │   │   └── profile/
-│   │   ├── shared/           # Shared widgets, services
-│   │   └── main.dart
-│   ├── test/
-│   └── pubspec.yaml
-│
-├── backend/                   # NestJS API server
-│   ├── src/
-│   │   ├── auth/
-│   │   ├── users/
-│   │   ├── workouts/
-│   │   ├── medications/
-│   │   ├── exercises/
-│   │   ├── gamification/
-│   │   └── main.ts
-│   ├── test/
-│   └── package.json
-│
-├── ml-service/               # Python FastAPI ML service
-│   ├── app/
-│   │   ├── models/           # ML models
-│   │   ├── routers/          # API routes
-│   │   ├── services/         # Business logic
-│   │   └── main.py
-│   ├── tests/
-│   └── requirements.txt
-│
-├── database/                 # Database schemas & migrations
-│   ├── migrations/
-│   ├── seeds/
-│   └── schema.sql
-│
-├── docs/                     # Documentation
-│   ├── api/                  # API documentation
-│   ├── architecture/         # Architecture diagrams
-│   └── compliance/           # Privacy policy, ToS
-│
-└── infrastructure/           # Deployment configs
-    ├── docker/
-    ├── kubernetes/
-    └── terraform/
+---
+
+## 🚀 Inicio Rápido
+
+### Prerequisitos
+
+```bash
+# Node.js 18+
+node --version  # v18.x o superior
+
+# Python 3.11+
+python --version  # 3.11 o superior
+
+# Flutter 3.19+
+flutter --version  # 3.19 o superior
 ```
 
-## Getting Started
+### Clonar Repositorio
 
-### Prerequisites
-- Flutter SDK 3.19+
-- Node.js 20+
-- Python 3.11+
-- PostgreSQL 16+
-- Redis
-- Supabase account
-- RapidAPI account (for ExerciseDB)
-
-### Installation
-
-#### 1. Clone Repository
 ```bash
 git clone https://github.com/GynoRomeroPrado/APP-mejorador-salud-.git
 cd APP-mejorador-salud-
 ```
 
-#### 2. Setup Mobile App
-```bash
-cd mobile
-flutter pub get
-flutter run
-```
+### Setup Backend
 
-#### 3. Setup Backend
 ```bash
 cd backend
 npm install
+
+# Configurar variables de entorno
+cp .env.example .env
+# Editar .env con tus configuraciones
+
+# Ejecutar migraciones
+npm run migration:run
+
+# Iniciar en desarrollo
 npm run start:dev
 ```
 
-#### 4. Setup ML Service
+Backend corriendo en `http://localhost:3000`
+Swagger docs en `http://localhost:3000/api`
+
+### Setup ML Service
+
 ```bash
 cd ml-service
+
+# Crear virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Instalar dependencias
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+
+# Configurar variables de entorno
+cp .env.example .env
+
+# Iniciar servicio
+python main.py
 ```
 
-#### 5. Setup Database
-```bash
-# Run in Supabase SQL editor or locally
-psql -U postgres -d health_app -f database/schema.sql
-```
+ML Service corriendo en `http://localhost:8000`
+Docs en `http://localhost:8000/docs`
 
-### Environment Variables
-
-Create `.env` files in each service directory:
-
-**Backend (.env)**
-```env
-DATABASE_URL=postgresql://user:pass@localhost:5432/health_app
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your-secret-key
-RAPIDAPI_KEY=your-rapidapi-key
-NEWSAPI_KEY=your-newsapi-key
-PUBMED_API_KEY=your-pubmed-key
-```
-
-**Mobile (.env)**
-```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
-API_BASE_URL=http://localhost:3000
-ML_SERVICE_URL=http://localhost:8000
-```
-
-**ML Service (.env)**
-```env
-DATABASE_URL=postgresql://user:pass@localhost:5432/health_app
-MODEL_PATH=./models
-```
-
-## API Documentation
-
-API documentation is available at:
-- Backend: http://localhost:3000/api/docs (Swagger)
-- ML Service: http://localhost:8000/docs (FastAPI auto-docs)
-
-## Testing
+### Setup Mobile App
 
 ```bash
-# Mobile
-cd mobile && flutter test
+cd mobile
 
-# Backend
-cd backend && npm test
+# Instalar dependencias
+flutter pub get
 
-# ML Service
-cd ml-service && pytest
+# Generar código
+flutter pub run build_runner build --delete-conflicting-outputs
+
+# Ejecutar en emulador/dispositivo
+flutter run
 ```
-
-## Deployment
-
-### MVP Deployment (Railway + Supabase)
-
-1. **Database**: Deploy PostgreSQL on Supabase
-2. **Backend**: Deploy NestJS on Railway
-3. **ML Service**: Deploy FastAPI on Railway
-4. **Mobile**: Build and deploy to TestFlight/Play Console
-
-See [deployment guide](docs/deployment.md) for details.
-
-## Security & Compliance
-
-- **Encryption**: AES-256-GCM for sensitive data at rest
-- **Transport**: TLS 1.3 for all API communication
-- **GDPR**: Full compliance with data export, deletion, portability
-- **HIPAA**: Medication data encryption and audit logs
-- **Authentication**: OAuth 2.0, JWT tokens with refresh
-
-## Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
-
-## License
-
-This project is licensed under the MIT License - see [LICENSE](LICENSE) file.
-
-## Support
-
-- Email: support@healthapp.com
-- Documentation: https://docs.healthapp.com
-- Issues: https://github.com/GynoRomeroPrado/APP-mejorador-salud-/issues
-
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for detailed development timeline.
-
-## Acknowledgments
-
-- ExerciseDB for exercise data
-- PubMed for medical research
-- NewsAPI for health news
-- ZenQuotes for motivational content
-- Supabase for backend infrastructure
 
 ---
 
-**Version**: 1.0.0-MVP
-**Last Updated**: November 2024
-**Status**: Active Development
+## 📁 Estructura del Proyecto
+
+```
+APP-mejorador-salud-/
+│
+├── backend/                    # NestJS Backend API
+│   ├── src/
+│   │   ├── auth/              # Módulo de autenticación
+│   │   ├── users/             # Gestión de usuarios
+│   │   ├── medications/       # Seguimiento de medicamentos
+│   │   ├── workouts/          # Entrenamientos
+│   │   ├── gamification/      # Sistema de gamificación
+│   │   └── common/            # Utilidades comunes
+│   └── test/                  # Tests
+│
+├── ml-service/                # FastAPI ML Service
+│   ├── models/                # Modelos ML
+│   ├── routers/               # API Routers
+│   ├── middleware/            # Auth, rate limiting
+│   └── tests/                 # Tests
+│
+├── mobile/                    # Flutter Mobile App
+│   ├── lib/
+│   │   ├── features/          # Features modulares
+│   │   │   ├── auth/          # Autenticación
+│   │   │   ├── exercises/     # Ejercicios
+│   │   │   ├── workouts/      # Entrenamientos
+│   │   │   └── gamification/  # Gamificación
+│   │   └── core/              # Core utilities
+│   └── test/                  # Tests completos
+│
+├── .github/                   # GitHub Actions workflows
+│   ├── workflows/             # 6 CI/CD pipelines
+│   ├── dependabot.yml         # Dependency updates
+│   └── CI_CD_GUIDE.md         # Guía de CI/CD
+│
+├── docs/                      # Documentación
+│   └── MVP_COMPLETO_100_PORCIENTO.md
+│
+└── README.md                  # Este archivo
+```
+
+---
+
+## 🧪 Testing
+
+### Mobile Tests
+
+```bash
+# Tests unitarios
+flutter test
+
+# Tests con cobertura
+flutter test --coverage
+genhtml coverage/lcov.info -o coverage/html
+open coverage/html/index.html
+
+# Integration tests
+patrol test
+```
+
+**Cobertura:** ~65% | **Tests:** 14 archivos
+
+### Backend Tests
+
+```bash
+# Tests con cobertura
+npm run test:cov
+
+# Tests E2E
+npm run test:e2e
+```
+
+**Cobertura:** ~85%
+
+### ML Service Tests
+
+```bash
+# Tests con cobertura
+pytest --cov
+```
+
+**Cobertura:** ~80%
+
+---
+
+## 🔄 CI/CD
+
+Usamos **GitHub Actions** para automatización completa.
+Ver [CI/CD Guide](.github/CI_CD_GUIDE.md) para detalles.
+
+### Workflows Activos
+
+✅ **Backend CI/CD** - Testing, security, deploy (8-12 min)
+✅ **ML Service CI/CD** - Testing, security, deploy (6-10 min)
+✅ **Mobile CI/CD** - Testing, build, deploy (15-25 min)
+✅ **PR Checks** - Validación de Pull Requests (10-15 min)
+✅ **Scheduled Tasks** - Cleanup, security scans (diario)
+✅ **Release** - Automatización de releases
+
+---
+
+## 🚢 Deployment
+
+### Backend & ML Service (Railway)
+
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Deploy backend
+cd backend
+railway up --service backend
+
+# Deploy ML service
+cd ml-service
+railway up --service ml-service
+```
+
+**URLs Producción:**
+- Backend API: `https://api.healthfitness.app`
+- ML Service: `https://ml.healthfitness.app`
+
+### Mobile App
+
+**Android:**
+```bash
+flutter build appbundle --release
+# Upload a Play Console (automático via CI)
+```
+
+**iOS:**
+```bash
+flutter build ios --release
+# Upload a TestFlight (automático via CI)
+```
+
+---
+
+## 💻 Comandos Útiles
+
+### Backend
+```bash
+npm run start:dev    # Desarrollo
+npm run build        # Build producción
+npm run test:cov     # Tests con cobertura
+npm run lint         # Linter
+```
+
+### ML Service
+```bash
+python main.py       # Iniciar servidor
+pytest --cov         # Tests con cobertura
+black .              # Formatear código
+flake8 .             # Linter
+```
+
+### Mobile
+```bash
+flutter run          # Ejecutar app
+flutter test         # Tests unitarios
+flutter analyze      # Analizar código
+flutter build apk    # Build Android
+dart format .        # Formatear código
+```
+
+---
+
+## 🤝 Contribuir
+
+¡Contribuciones son bienvenidas!
+
+### Proceso
+
+1. Fork el repositorio
+2. Crear feature branch (`git checkout -b feat/amazing-feature`)
+3. Commit cambios (`git commit -m 'feat: add amazing feature'`)
+4. Push a branch (`git push origin feat/amazing-feature`)
+5. Abrir Pull Request
+
+### Conventional Commits
+
+```
+feat:     nueva característica
+fix:      corrección de bug
+docs:     cambios en documentación
+style:    formateo, punto y coma, etc
+refactor: refactorización de código
+perf:     mejoras de performance
+test:     agregar tests
+ci:       cambios en CI/CD
+```
+
+---
+
+## 📞 Soporte
+
+- 📧 Email: support@healthfitness.app
+- 🐛 Issues: [GitHub Issues](https://github.com/GynoRomeroPrado/APP-mejorador-salud-/issues)
+- 📖 Docs: [Documentation](docs/)
+
+---
+
+## 📝 Licencia
+
+Este proyecto está bajo la licencia MIT. Ver [LICENSE](LICENSE) para más detalles.
+
+---
+
+## 👥 Autores
+
+- **Gyno Romero Prado** - [@GynoRomeroPrado](https://github.com/GynoRomeroPrado)
+
+Ver [contributors](https://github.com/GynoRomeroPrado/APP-mejorador-salud-/contributors) para más información.
+
+---
+
+## 🙏 Agradecimientos
+
+- [ExerciseDB](https://rapidapi.com/justin-WFnsXH_t6/api/exercisedb) - API de ejercicios
+- [Supabase](https://supabase.com/) - Backend as a Service
+- [Railway](https://railway.app/) - Hosting platform
+- [Flutter Team](https://flutter.dev/) - Framework móvil
+- [NestJS Team](https://nestjs.com/) - Framework backend
+- [FastAPI](https://fastapi.tiangolo.com/) - Framework Python
+
+---
+
+## 📊 Estado del Proyecto
+
+![GitHub last commit](https://img.shields.io/github/last-commit/GynoRomeroPrado/APP-mejorador-salud-)
+![GitHub issues](https://img.shields.io/github/issues/GynoRomeroPrado/APP-mejorador-salud-)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/GynoRomeroPrado/APP-mejorador-salud-)
+
+**Versión:** 1.0.0
+**Estado:** ✅ MVP Completado
+**Última actualización:** 2025-11-17
+
+---
+
+<p align="center">
+  Hecho con ❤️ y 💪 para la comunidad fitness
+</p>
