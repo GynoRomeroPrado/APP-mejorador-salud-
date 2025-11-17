@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+
+# Models (se entrenarán en producción)
+models/saved_models/*.joblib
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+docs/
+
+# CI/CD
+.github/
