@@ -35,7 +35,7 @@ sentry-sdk[fastapi]==1.38.0
 
 # Utilidades
 python-dotenv==1.0.0
-tenacity==8.2.3
+tenacity==9.1.2
 
 # Testing
 pytest==7.4.3
