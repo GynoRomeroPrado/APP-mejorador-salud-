@@ -44,7 +44,7 @@
     "winston": "^3.11.0",
     "nest-winston": "^1.9.4",
     "rxjs": "^7.8.1",
-    "reflect-metadata": "^0.1.13"
+    "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.2.1",
